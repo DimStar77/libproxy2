@@ -1,7 +1,7 @@
 /*******************************************************************************
  * libproxy - A library for proxy configuration
  * Copyright (C) 2006 Nathaniel McCallum <nathaniel@natemccallum.com>
- * Copyright (C) 2022 Jan-Michael Brummer <jan.brummer@tabos.org>
+ * Copyright (C) 2022-2023 Jan-Michael Brummer <jan.brummer@tabos.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -115,6 +115,12 @@ void px_proxy_factory_free_proxies (char **proxies);
  * Frees the pxProxyFactory instance when no longer used.
  */
 void px_proxy_factory_free (pxProxyFactory *self);
+
+typedef void (*pxProxyCallback)(char **proxies,
+                                void  *data);
+
+void px_proxy_factory_get_proxies_async (pxProxyFactory *self, const char *url, pxProxyCallback callback, void *data);
+
 
 #ifdef __cplusplus
 }

@@ -128,3 +128,60 @@ px_proxy_factory_free (struct px_proxy_factory *self)
   g_clear_object (&self->proxy);
   g_clear_pointer (&self, g_free);
 }
+
+static void
+on_proxy_ready (GObject      *source_object,
+                GAsyncResult *res,
+                gpointer      user_data)
+{
+  g_autoptr (GError) error = NULL;
+  g_autoptr (GVariant) result = g_dbus_proxy_call_finish (G_DBUS_PROXY (source_object), res, &error);
+  g_autoptr (GVariantIter) iter = NULL;
+  g_autoptr (GList) list = NULL;
+  pxProxyCallback callback = user_data;
+  GList *tmp;
+  char *str;
+  char **retval;
+  gsize len;
+  gsize idx;
+
+  g_variant_get (result, "(as)", &iter);
+
+  while (g_variant_iter_loop (iter, "&s", &str)) {
+    list = g_list_prepend (list, str);
+  }
+
+  len = g_list_length (list);
+  if (len == 0) {
+    retval = g_malloc0 (sizeof (char *) * 2);
+    retval[0] = g_strdup ("direct://");
+
+    callback (retval, NULL);
+    return;
+  }
+
+  retval = g_malloc0_n (len + 1, sizeof (char *));
+  for (tmp = list, idx = 0; tmp && tmp->data; tmp = tmp->next, idx++) {
+    char *value = tmp->data;
+    retval[idx] = g_strdup (value);
+  }
+
+  callback (retval, NULL);
+}
+
+void
+px_proxy_factory_get_proxies_async (struct px_proxy_factory *self,
+                                    const char              *url,
+                                    pxProxyCallback          callback,
+                                    void                    *data)
+{
+  g_dbus_proxy_call (self->proxy,
+                     "query",
+                     g_variant_new ("(s)", url),
+                     G_DBUS_CALL_FLAGS_NONE,
+                     -1,
+                     self->cancellable,
+                     on_proxy_ready,
+                     callback);
+}
+
